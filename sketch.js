@@ -27,12 +27,46 @@ function draw() {
   let x = (width - imgWidth) / 2;
   let y = (height - imgHeight) / 2;
   
-  // 在畫布上繪製攝影機影像（並修正左右顛倒）
-  push(); // 儲存目前的繪製狀態
-  translate(width, 0); // 將座標原點水平推移到畫布右側
-  scale(-1, 1); // 將 X 軸設定為 -1 來達到水平翻轉的效果
-  image(cam, x, y, imgWidth, imgHeight); // 繪製翻轉後的影像
-  pop(); // 恢復先前的繪製狀態，以免影響後續其他的繪圖
+  // 將視訊畫面以 20x20 為單位分隔，製作馬賽克與聲波特效
+  let step = 20;
+  if (cam.width > 0 && cam.height > 0) {
+    cam.loadPixels();
+    if (cam.pixels.length > 0) {
+      // 算出攝影機原始影像與畫布顯示影像的比例
+      let wRatio = cam.width / imgWidth;
+      let hRatio = cam.height / imgHeight;
+
+      noStroke();
+      for (let j = 0; j < imgHeight; j += step) {
+        for (let i = 0; i < imgWidth; i += step) {
+          // 取得該單位中心的像素座標，並做水平翻轉以修正左右顛倒
+          let camX = floor((imgWidth - (i + step / 2)) * wRatio);
+          let camY = floor((j + step / 2) * hRatio);
+          camX = constrain(camX, 0, cam.width - 1);
+          camY = constrain(camY, 0, cam.height - 1);
+
+          // 計算像素在 cam.pixels 陣列中的索引值
+          let index = (camY * cam.width + camX) * 4;
+          let r = cam.pixels[index];
+          let g = cam.pixels[index + 1];
+          let b = cam.pixels[index + 2];
+
+          // 取得 (R+G+B)/3 灰階值
+          let gray = (r + g + b) / 3;
+
+          // 以該灰階值作為顏色顯示
+          fill(gray);
+
+          // 類似聲波的特效：根據灰階數值改變矩形的高度
+          let waveH = map(gray, 0, 255, 0, step);
+          
+          // 繪製置中的矩形，讓每個單位看起來像是聲波柱
+          // 寬度稍微縮小(step * 0.8)產生間隔，並將 X 與 Y 置中
+          rect(x + i + step * 0.1, y + j + (step - waveH) / 2, step * 0.8, waveH);
+        }
+      }
+    }
+  }
 
   // 在 pg 圖層上繪製內容（這裡以畫一個半透明圓形作為範例）
   pg.clear(); // 清除上一幀的畫面，保持背景透明
